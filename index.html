@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piano Note Recognizer v2</title>
+    <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .selector-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .selector-group label {
+            font-size: 0.85em;
+            color: #667eea;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select {
+            padding: 10px 16px;
+            font-size: 14px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            background: white;
+            color: #667eea;
+            transition: all 0.3s ease;
+            min-width: 150px;
+        }
+
+        select:hover {
+            border-color: #5568d3;
+            background: #f7fafc;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #5568d3;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #startBtn {
+            background: #667eea;
+            color: white;
+        }
+
+        #startBtn:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        #startBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #clearBtn {
+            background: #f56565;
+            color: white;
+        }
+
+        #clearBtn:hover {
+            background: #e53e3e;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 101, 101, 0.4);
+        }
+
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .status.error {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .status.success {
+            background: #c6f6d5;
+            color: #2f855a;
+        }
+
+        .status.info {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+
+        .display-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .note-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            color: white;
+        }
+
+        .note-display h2 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .note-display .note {
+            font-size: 5em;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .note-display .frequency {
+            font-size: 1.5em;
+            opacity: 0.8;
+            margin-top: 10px;
+        }
+
+        .metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .metric {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .metric h3 {
+            font-size: 0.9em;
+            color: #718096;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .meter {
+            height: 20px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .meter-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #48bb78, #38a169);
+            transition: width 0.1s ease;
+            border-radius: 10px;
+        }
+
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-top: 5px;
+        }
+
+        .staff-container {
+            background: #f7fafc;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        .staff-container h2 {
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        #staff {
+            min-height: 200px;
+        }
+
+        .history {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .history h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .history-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .history-item {
+            background: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            color: #667eea;
+            border: 2px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .history-item.latest {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+            .display-panel {
+                grid-template-columns: 1fr;
+            }
+
+            .note-display .note {
+                font-size: 4em;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            select, button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎹 Piano Note Recognizer v2</h1>
+
+        <div class="controls">
+            <div class="selector-group">
+                <label for="inputSource">Input Source</label>
+                <select id="inputSource">
+                    <option value="microphone">Microphone</option>
+                    <option value="midi">MIDI</option>
+                </select>
+            </div>
+
+            <div class="selector-group">
+                <label for="midiDevice">MIDI Device</label>
+                <select id="midiDevice" disabled>
+                    <option value="">No MIDI devices</option>
+                </select>
+            </div>
+
+            <div class="selector-group">
+                <label for="noteNaming">Note Naming</label>
+                <select id="noteNaming">
+                    <option value="english">C, D, E, F, G, A, B</option>
+                    <option value="russian">До, Ре, Ми, Фа, Соль, Ля, Си</option>
+                </select>
+            </div>
+
+            <button id="startBtn">Start</button>
+            <button id="clearBtn">Clear Staff</button>
+        </div>
+
+        <div id="status" class="status info">Select input source and click "Start"</div>
+
+        <div class="display-panel">
+            <div class="note-display">
+                <h2>Detected Note</h2>
+                <div class="note" id="currentNote">—</div>
+                <div class="frequency" id="currentFreq"></div>
+            </div>
+
+            <div class="metrics">
+                <div class="metric">
+                    <h3>Volume</h3>
+                    <div class="meter">
+                        <div class="meter-fill" id="volumeMeter"></div>
+                    </div>
+                    <div class="metric-value" id="volumeValue">0%</div>
+                </div>
+
+                <div class="metric">
+                    <h3>Clarity / Confidence</h3>
+                    <div class="meter">
+                        <div class="meter-fill" id="clarityMeter"></div>
+                    </div>
+                    <div class="metric-value" id="clarityValue">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="staff-container">
+            <h2>Musical Staff</h2>
+            <div id="staff"></div>
+        </div>
+
+        <div class="history">
+            <h3>Note History</h3>
+            <div class="history-items" id="historyItems"></div>
+        </div>
+    </div>
+
+    <script>
+        const { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } = Vex.Flow;
+
+        // State
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        let scriptProcessor = null;
+        let midiAccess = null;
+        let selectedMidiInput = null;
+        let isListening = false;
+        let detectedNotes = [];
+        let historyArray = [];
+        let lastNoteTime = 0;
+        let lastDetectedNote = null;
+        let noteStartTime = 0;
+        const NOTE_HOLD_TIME = 180; // ms
+        const MAX_HISTORY = 15;
+
+        // UI Elements
+        const inputSourceSelect = document.getElementById('inputSource');
+        const midiDeviceSelect = document.getElementById('midiDevice');
+        const noteNamingSelect = document.getElementById('noteNaming');
+        const startBtn = document.getElementById('startBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const status = document.getElementById('status');
+        const currentNoteEl = document.getElementById('currentNote');
+        const currentFreqEl = document.getElementById('currentFreq');
+        const volumeMeter = document.getElementById('volumeMeter');
+        const volumeValue = document.getElementById('volumeValue');
+        const clarityMeter = document.getElementById('clarityMeter');
+        const clarityValue = document.getElementById('clarityValue');
+        const historyItems = document.getElementById('historyItems');
+        const staffDiv = document.getElementById('staff');
+
+        // Note mapping
+        const NOTE_NAMES_ENGLISH = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const NOTE_NAMES_RUSSIAN = ['До', 'До#', 'Ре', 'Ре#', 'Ми', 'Фа', 'Фа#', 'Соль', 'Соль#', 'Ля', 'Ля#', 'Си'];
+
+        function getNoteNames() {
+            return noteNamingSelect.value === 'russian' ? NOTE_NAMES_RUSSIAN : NOTE_NAMES_ENGLISH;
+        }
+
+        // MIDI Setup
+        async function setupMIDI() {
+            try {
+                midiAccess = await navigator.requestMIDIAccess();
+                updateMIDIDeviceList();
+                midiAccess.onstatechange = updateMIDIDeviceList;
+                status.className = 'status info';
+                status.textContent = 'MIDI ready. Select a device and click Start.';
+            } catch (error) {
+                console.error('MIDI access error:', error);
+                status.className = 'status error';
+                status.textContent = 'MIDI not supported or access denied.';
+            }
+        }
+
+        function updateMIDIDeviceList() {
+            const inputs = Array.from(midiAccess.inputs.values());
+            midiDeviceSelect.innerHTML = '';
+
+            if (inputs.length === 0) {
+                midiDeviceSelect.innerHTML = '<option value="">No MIDI devices</option>';
+                midiDeviceSelect.disabled = true;
+            } else {
+                inputs.forEach(input => {
+                    const option = document.createElement('option');
+                    option.value = input.id;
+                    option.textContent = input.name;
+                    midiDeviceSelect.appendChild(option);
+                });
+                midiDeviceSelect.disabled = false;
+            }
+        }
+
+        function startMIDI() {
+            if (!midiAccess) {
+                status.className = 'status error';
+                status.textContent = 'MIDI not available.';
+                return;
+            }
+
+            const deviceId = midiDeviceSelect.value;
+            if (!deviceId) {
+                status.className = 'status error';
+                status.textContent = 'Please select a MIDI device.';
+                return;
+            }
+
+            selectedMidiInput = midiAccess.inputs.get(deviceId);
+            selectedMidiInput.onmidimessage = handleMIDIMessage;
+
+            isListening = true;
+            startBtn.textContent = 'Stop';
+            startBtn.style.background = '#f56565';
+            status.className = 'status success';
+            status.textContent = 'Listening to MIDI... Play some notes!';
+
+            // Hide mic-specific meters for MIDI
+            volumeMeter.parentElement.parentElement.style.display = 'none';
+            clarityMeter.parentElement.parentElement.style.display = 'none';
+        }
+
+        function stopMIDI() {
+            if (selectedMidiInput) {
+                selectedMidiInput.onmidimessage = null;
+                selectedMidiInput = null;
+            }
+
+            isListening = false;
+            startBtn.textContent = 'Start';
+            startBtn.style.background = '#667eea';
+            status.className = 'status info';
+            status.textContent = 'Stopped listening';
+
+            currentNoteEl.textContent = '—';
+            currentFreqEl.textContent = '';
+        }
+
+        function handleMIDIMessage(event) {
+            const [command, note, velocity] = event.data;
+
+            // Note On (144-159) with velocity > 0
+            if (command >= 144 && command <= 159 && velocity > 0) {
+                const { note: noteName, octave } = midiNoteToNote(note);
+                const noteNames = getNoteNames();
+                const noteIndex = NOTE_NAMES_ENGLISH.indexOf(noteName);
+                const displayNoteName = noteNames[noteIndex];
+                const noteString = `${displayNoteName}${octave}`;
+
+                currentNoteEl.textContent = noteString;
+                currentFreqEl.textContent = `MIDI Note ${note}`;
+
+                // Add to staff
+                addNoteToStaff(noteName, octave);
+            }
+            // Note Off (128-143) or Note On with velocity 0
+            else if ((command >= 128 && command <= 143) || (command >= 144 && command <= 159 && velocity === 0)) {
+                currentNoteEl.textContent = '—';
+                currentFreqEl.textContent = '';
+            }
+        }
+
+        function midiNoteToNote(midiNote) {
+            const octave = Math.floor(midiNote / 12) - 1;
+            const note = NOTE_NAMES_ENGLISH[midiNote % 12];
+            return { note, octave };
+        }
+
+        // Autocorrelation pitch detection (YIN algorithm)
+        function autoCorrelate(buffer, sampleRate) {
+            const SIZE = buffer.length;
+            const MAX_SAMPLES = Math.floor(SIZE / 2);
+            let best_offset = -1;
+            let best_correlation = 0;
+            let rms = 0;
+
+            // Calculate RMS (volume)
+            for (let i = 0; i < SIZE; i++) {
+                const val = buffer[i];
+                rms += val * val;
+            }
+            rms = Math.sqrt(rms / SIZE);
+
+            // Not enough signal
+            if (rms < 0.01) return { frequency: -1, clarity: 0, volume: 0 };
+
+            // Autocorrelation
+            let lastCorrelation = 1;
+            for (let offset = 1; offset < MAX_SAMPLES; offset++) {
+                let correlation = 0;
+                for (let i = 0; i < MAX_SAMPLES; i++) {
+                    correlation += Math.abs(buffer[i] - buffer[i + offset]);
+                }
+                correlation = 1 - (correlation / MAX_SAMPLES);
+
+                if (correlation > 0.9 && correlation > lastCorrelation) {
+                    const freq = sampleRate / offset;
+                    // Check if frequency is in piano range (C3-C6: ~130-1050 Hz)
+                    if (freq >= 130 && freq <= 1050) {
+                        if (correlation > best_correlation) {
+                            best_correlation = correlation;
+                            best_offset = offset;
+                        }
+                    }
+                }
+
+                lastCorrelation = correlation;
+            }
+
+            if (best_offset === -1) {
+                return { frequency: -1, clarity: 0, volume: rms };
+            }
+
+            const frequency = sampleRate / best_offset;
+            const clarity = best_correlation;
+
+            return { frequency, clarity, volume: rms };
+        }
+
+        function frequencyToNote(frequency) {
+            const semitones = Math.round(12 * Math.log2(frequency / 440)) + 69;
+            const octave = Math.floor(semitones / 12) - 1;
+            const note = NOTE_NAMES_ENGLISH[semitones % 12];
+            return { note, octave, semitones };
+        }
+
+        function noteToVexFlowNote(note, octave) {
+            // Convert note name to VexFlow format (always use English for VexFlow)
+            let noteName = note.replace('#', '');
+            const hasAccidental = note.includes('#');
+            const vexNote = `${noteName.toLowerCase()}/${octave}`;
+
+            return { keys: [vexNote], hasAccidental, accidental: hasAccidental ? '#' : null };
+        }
+
+        function updateDisplay(frequency, clarity, volume) {
+            // Update volume meter
+            const volumePercent = Math.min(100, volume * 500);
+            volumeMeter.style.width = `${volumePercent}%`;
+            volumeValue.textContent = `${Math.round(volumePercent)}%`;
+
+            // Update clarity meter
+            const clarityPercent = Math.round(clarity * 100);
+            clarityMeter.style.width = `${clarityPercent}%`;
+            clarityValue.textContent = `${clarityPercent}%`;
+
+            if (frequency > 0 && clarity > 0.85) {
+                const { note, octave } = frequencyToNote(frequency);
+                const noteNames = getNoteNames();
+                const noteIndex = NOTE_NAMES_ENGLISH.indexOf(note);
+                const displayNoteName = noteNames[noteIndex];
+                const noteString = `${displayNoteName}${octave}`;
+
+                currentNoteEl.textContent = noteString;
+                currentFreqEl.textContent = `${Math.round(frequency)} Hz`;
+
+                // Debounce note registration
+                const now = Date.now();
+                if (lastDetectedNote === note + octave) {
+                    if (now - noteStartTime >= NOTE_HOLD_TIME && now - lastNoteTime > NOTE_HOLD_TIME) {
+                        addNoteToStaff(note, octave);
+                        lastNoteTime = now;
+                    }
+                } else {
+                    lastDetectedNote = note + octave;
+                    noteStartTime = now;
+                }
+            } else {
+                currentNoteEl.textContent = '—';
+                currentFreqEl.textContent = '';
+                lastDetectedNote = null;
+            }
+        }
+
+        function addNoteToStaff(note, octave) {
+            detectedNotes.push({ note, octave });
+
+            // Update history - store note and octave for language switching
+            historyArray.push({ note, octave });
+
+            // Limit history
+            if (historyArray.length > MAX_HISTORY) {
+                historyArray.shift();
+            }
+
+            // Limit notes on staff
+            if (detectedNotes.length > 12) {
+                detectedNotes.shift();
+            }
+
+            renderStaff();
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const noteNames = getNoteNames();
+
+            // Render history with latest note at the end and highlighted
+            historyItems.innerHTML = historyArray
+                .map((item, i) => {
+                    const noteIndex = NOTE_NAMES_ENGLISH.indexOf(item.note);
+                    const displayNoteName = noteNames[noteIndex];
+                    const noteString = `${displayNoteName}${item.octave}`;
+                    const isLatest = i === historyArray.length - 1;
+                    return `<div class="history-item ${isLatest ? 'latest' : ''}">${noteString}</div>`;
+                })
+                .join('');
+        }
+
+        function renderStaff() {
+            staffDiv.innerHTML = '';
+
+            if (detectedNotes.length === 0) {
+                staffDiv.innerHTML = '<p style="color: #a0aec0; text-align: center; padding: 40px;">Play some notes to see them appear here</p>';
+                return;
+            }
+
+            const width = Math.max(800, detectedNotes.length * 80 + 200);
+            const renderer = new Renderer(staffDiv, Renderer.Backends.SVG);
+            renderer.resize(width, 200);
+            const context = renderer.getContext();
+
+            const stave = new Stave(10, 40, width - 20);
+            stave.addClef('treble').setContext(context).draw();
+
+            const notes = detectedNotes.map(({ note, octave }) => {
+                const vexNote = noteToVexFlowNote(note, octave);
+                const staveNote = new StaveNote({
+                    keys: vexNote.keys,
+                    duration: 'q'
+                });
+
+                if (vexNote.hasAccidental) {
+                    staveNote.addModifier(new Accidental(vexNote.accidental), 0);
+                }
+
+                return staveNote;
+            });
+
+            const voice = new Voice({ num_beats: notes.length, beat_value: 4 });
+            voice.addTickables(notes);
+
+            new Formatter().joinVoices([voice]).format([voice], width - 150);
+            voice.draw(context, stave);
+        }
+
+        function processAudio(event) {
+            const input = event.inputBuffer.getChannelData(0);
+            const buffer = new Float32Array(2048);
+            buffer.set(input.slice(0, 2048));
+
+            const result = autoCorrelate(buffer, audioContext.sampleRate);
+            updateDisplay(result.frequency, result.clarity, result.volume);
+        }
+
+        async function startMicrophone() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(stream);
+                scriptProcessor = audioContext.createScriptProcessor(2048, 1, 1);
+
+                analyser.fftSize = 2048;
+                microphone.connect(analyser);
+                analyser.connect(scriptProcessor);
+                scriptProcessor.connect(audioContext.destination);
+
+                scriptProcessor.onaudioprocess = processAudio;
+
+                isListening = true;
+                startBtn.textContent = 'Stop';
+                startBtn.style.background = '#f56565';
+                status.className = 'status success';
+                status.textContent = 'Listening... Play some notes!';
+
+                // Show mic-specific meters
+                volumeMeter.parentElement.parentElement.style.display = 'block';
+                clarityMeter.parentElement.parentElement.style.display = 'block';
+
+            } catch (error) {
+                console.error('Microphone access error:', error);
+                status.className = 'status error';
+                status.textContent = 'Microphone access denied. Please allow microphone access and try again.';
+            }
+        }
+
+        function stopMicrophone() {
+            if (scriptProcessor) scriptProcessor.disconnect();
+            if (analyser) analyser.disconnect();
+            if (microphone) {
+                microphone.disconnect();
+                microphone.mediaStream.getTracks().forEach(track => track.stop());
+            }
+            if (audioContext) audioContext.close();
+
+            isListening = false;
+            startBtn.textContent = 'Start';
+            startBtn.style.background = '#667eea';
+            status.className = 'status info';
+            status.textContent = 'Stopped listening';
+
+            currentNoteEl.textContent = '—';
+            currentFreqEl.textContent = '';
+            volumeMeter.style.width = '0%';
+            volumeValue.textContent = '0%';
+            clarityMeter.style.width = '0%';
+            clarityValue.textContent = '0%';
+        }
+
+        function clearStaff() {
+            detectedNotes = [];
+            historyArray = [];
+            renderStaff();
+            renderHistory();
+        }
+
+        // Event listeners
+        inputSourceSelect.addEventListener('change', () => {
+            const isMIDI = inputSourceSelect.value === 'midi';
+            midiDeviceSelect.disabled = !isMIDI;
+
+            if (isMIDI && !midiAccess) {
+                setupMIDI();
+            }
+
+            if (isListening) {
+                if (inputSourceSelect.value === 'microphone') {
+                    stopMIDI();
+                } else {
+                    stopMicrophone();
+                }
+            }
+        });
+
+        startBtn.addEventListener('click', () => {
+            if (isListening) {
+                if (inputSourceSelect.value === 'microphone') {
+                    stopMicrophone();
+                } else {
+                    stopMIDI();
+                }
+            } else {
+                if (inputSourceSelect.value === 'microphone') {
+                    startMicrophone();
+                } else {
+                    startMIDI();
+                }
+            }
+        });
+
+        clearBtn.addEventListener('click', clearStaff);
+
+        // Update note names when language changes
+        noteNamingSelect.addEventListener('change', () => {
+            renderHistory();
+        });
+
+        // Initial render
+        renderStaff();
+    </script>
+</body>
+</html>
